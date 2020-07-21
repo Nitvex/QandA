@@ -1,7 +1,7 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/core';
 import React from 'react';
-import user from './zondicons/user.svg';
+import user from '../zondicons/user.svg';
 export const UserIcon = () => (
   <img
     css={css`

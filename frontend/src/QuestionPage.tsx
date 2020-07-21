@@ -4,12 +4,21 @@ import { gray3, gray6 } from './Styles';
 import React, { FC, useState, Fragment, useEffect } from 'react';
 import { Page } from './Page';
 import { RouteComponentProps } from 'react-router-dom';
-import { QuestionData, getQuestion } from './QuestionsData';
+import { QuestionData, getQuestion, postAnswer } from './QuestionsData';
 import { AnswerList } from './AnswerList';
+import { Form, minLength, required, Values } from './components/Form';
+import { Field } from './components/Field';
 
 interface RouteParams {
   questionId: string;
 }
+export interface PostQuestionData {
+  title: string;
+  content: string;
+  userName: string;
+  created: Date;
+}
+
 export const QuestionPage: FC<RouteComponentProps<RouteParams>> = ({
   match,
 }) => {
@@ -24,6 +33,17 @@ export const QuestionPage: FC<RouteComponentProps<RouteParams>> = ({
       doGetQuestion(questionId);
     }
   }, [match.params.questionId]);
+
+  const handleSubmit = async (values: Values) => {
+    const result = await postAnswer({
+      questionId: question!.questionId,
+      content: values.content,
+      userName: 'Fred',
+      created: new Date(),
+    });
+    return { success: result ? true : false };
+  };
+
   return (
     <Page>
       <div
@@ -66,6 +86,26 @@ export const QuestionPage: FC<RouteComponentProps<RouteParams>> = ({
               } on ${question.created.toLocaleDateString()} ${question.created.toLocaleTimeString()}`}
             </div>
             <AnswerList data={question.answers} />
+            <div
+              css={css`
+                margin-top: 20px;
+              `}
+            >
+              <Form
+                validationRules={{
+                  content: [
+                    { validator: required },
+                    { validator: minLength, arg: 50 },
+                  ],
+                }}
+                submitCaption="Submit Your Answer"
+                onSubmit={handleSubmit}
+                failureMessage="There was a problem with your answer"
+                successMessage="Your answer was successfully submitted"
+              >
+                <Field name="content" label="Your Answer" type="TextArea" />
+              </Form>
+            </div>
           </Fragment>
         )}
       </div>
