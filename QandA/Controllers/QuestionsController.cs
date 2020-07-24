@@ -49,10 +49,19 @@ namespace QandA.Controllers
             return question;
         }
 
+        [ActionName(nameof(GetQuestionAsync))]
         [HttpPost]
-        public async Task<ActionResult<QuestionGetSingleResponse>> PostQuestion(QuestionPostRequest questionPostRequest)
+        public async Task<ActionResult<QuestionGetSingleResponse>> PostQuestionAsync(QuestionPostRequest questionPostRequest)
         {
-            var savedQuestion = await _dataRepository.PostQuestionAsync(questionPostRequest);
+            var savedQuestion = await _dataRepository.PostQuestionAsync(new QuestionPostFullRequest
+                                {
+                                    Title = questionPostRequest.Title,
+                                    Content = questionPostRequest.Content,
+                                    UserId = "1",
+                                    UserName = "bob.test@test.com",
+                                    Created = DateTime.UtcNow
+                                }
+            );
             return CreatedAtAction(nameof(GetQuestionAsync),
                    new { questionId = savedQuestion.QuestionId },
                    savedQuestion
@@ -60,7 +69,7 @@ namespace QandA.Controllers
         }
 
         [HttpPut("{questionId}")]
-        public async Task<ActionResult<QuestionGetSingleResponse>> PutQuestion(int questionId, QuestionPutRequest questionPutRequest)
+        public async Task<ActionResult<QuestionGetSingleResponse>> PutQuestionAsync(int questionId, QuestionPutRequest questionPutRequest)
         {
             var question = await _dataRepository.GetQuestionAsync(questionId);
             if (question == null)
@@ -89,6 +98,27 @@ namespace QandA.Controllers
             }
             await _dataRepository.DeleteQuestionAsync(questionId);
             return NoContent();
+        }
+
+        [ActionName(nameof(PostQuestionAsync))]
+        [HttpPost("answer")]
+        public async Task<ActionResult<AnswerGetResponse>> PostAnswer(AnswerPostRequest answerPostRequest)
+        {
+            var questionExists = await _dataRepository.QuestionExistsAsync(answerPostRequest.QuestionId.Value);
+            if (!questionExists)
+            {
+                return NotFound();
+            }
+            var savedAnswer = await _dataRepository.PostAnswerAsync(new AnswerPostFullRequest
+                                    {
+                                        QuestionId = answerPostRequest.QuestionId.Value,
+                                        Content = answerPostRequest.Content,
+                                        UserId = "1",
+                                        UserName = "bob.test@test.com",
+                                        Created = DateTime.UtcNow
+                                    }
+            );
+            return savedAnswer;
         }
     }
 }

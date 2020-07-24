@@ -14,10 +14,9 @@ namespace QandA.Data
         Task<QuestionGetSingleResponse> GetQuestionAsync(int questionId);
         Task<bool> QuestionExistsAsync(int questionId);
         Task<AnswerGetResponse> GetAnswerAsync(int answerId);
-
-        Task<QuestionGetSingleResponse> PostQuestionAsync(QuestionPostRequest question);
+        Task<QuestionGetSingleResponse> PostQuestionAsync(QuestionPostFullRequest question);
         Task<QuestionGetSingleResponse> PutQuestionAsync(int questionId, QuestionPutRequest question);
         Task DeleteQuestionAsync(int questionId);
-        Task<AnswerGetResponse> PostAnswerAsync(AnswerPostRequest answer);
+        Task<AnswerGetResponse> PostAnswerAsync(AnswerPostFullRequest answer);
     }
 }

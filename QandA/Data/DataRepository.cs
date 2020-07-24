@@ -83,7 +83,7 @@ namespace QandA.Data
             );
         }
 
-        public async Task<QuestionGetSingleResponse> PostQuestionAsync(QuestionPostRequest question)
+        public async Task<QuestionGetSingleResponse> PostQuestionAsync(QuestionPostFullRequest question)
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -117,7 +117,7 @@ namespace QandA.Data
             );
         }
 
-        public async Task<AnswerGetResponse> PostAnswerAsync(AnswerPostRequest answer)
+        public async Task<AnswerGetResponse> PostAnswerAsync(AnswerPostFullRequest answer)
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
