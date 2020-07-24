@@ -18,132 +18,114 @@ namespace QandA.Data
             _connectionString = configuration["ConnectionStrings:DefaultConnection"];
         }
 
-        public AnswerGetResponse GetAnswer(int answerId)
+        public async Task<AnswerGetResponse> GetAnswerAsync(int answerId)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                return connection.QueryFirstOrDefault<AnswerGetResponse>(
-                    @"EXEC dbo.Answer_Get_ByAnswerId @AnswerId = @AnswerId",
-                    new { AnswerId = answerId }
-                );
-            }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return await connection.QueryFirstOrDefaultAsync<AnswerGetResponse>(
+                @"EXEC dbo.Answer_Get_ByAnswerId @AnswerId = @AnswerId",
+                new { AnswerId = answerId }
+            );
         }
 
-        public QuestionGetSingleResponse GetQuestion(int questionId)
+        public async Task<QuestionGetSingleResponse> GetQuestionAsync(int questionId)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                var question = connection.QueryFirstOrDefault<QuestionGetSingleResponse>(
-                    @"EXEC dbo.Question_GetSingle @QuestionId = @QuestionId",
-                    new { QuestionId = questionId }
-                );
-                if (question != null)
-                {
-                    question.Answers = connection.Query<AnswerGetResponse>(
-                        @"EXEC dbo.Answer_Get_ByQuestionId @QuestionId = @QuestionId",
-                        new { QuestionId = questionId }
-                    );
-                }
-                return question;
-            }
-        }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            var question = await connection.QueryFirstOrDefaultAsync<QuestionGetSingleResponse>(
+                @"EXEC dbo.Question_GetSingle @QuestionId = @QuestionId",
+                new { QuestionId = questionId }
+            );
 
-        public IEnumerable<QuestionGetManyResponse> GetQuestions()
-        {
-            using (var connection = new SqlConnection(_connectionString))
+            if (question != null)
             {
-                connection.Open();
-                return connection.Query<QuestionGetManyResponse>(@"EXEC dbo.Question_GetMany");
-            }
-        }
-
-        public IEnumerable<QuestionGetManyResponse> GetQuestionsBySearch(string search)
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                return connection.Query<QuestionGetManyResponse>(
-                    @"EXEC dbo.Question_GetMany_BySearch @Search = @Search", new { Search = search }
-                );
-            }
-        }
-
-        public IEnumerable<QuestionGetManyResponse> GetUnansweredQuestions()
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                return connection.Query<QuestionGetManyResponse>(
-                    "EXEC dbo.Question_GetUnanswered"
-                );
-            }
-        }
-
-        public bool QuestionExists(int questionId)
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                return connection.QueryFirst<bool>(
-                    @"EXEC dbo.Question_Exists @QuestionId = @QuestionId",
+                question.Answers = await connection.QueryAsync<AnswerGetResponse>(
+                    @"EXEC dbo.Answer_Get_ByQuestionId @QuestionId = @QuestionId",
                     new { QuestionId = questionId }
                 );
             }
+
+            return question;
         }
 
-        public QuestionGetSingleResponse PostQuestion(QuestionPostRequest question)
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsAsync()
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                var questionId = connection.QueryFirst<int>(
-                    @"EXEC dbo.Question_Post
-                    @Title = @Title, @Content = @Content, @UserId = @UserId, @UserName = @UserName, @Created = @Created",
-                    question
-                );
-                return GetQuestion(questionId);
-            }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return await connection.QueryAsync<QuestionGetManyResponse>(@"EXEC dbo.Question_GetMany");
         }
 
-        public QuestionGetSingleResponse PutQuestion(int questionId, QuestionPutRequest question)
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsBySearchAsync(string search)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                connection.Execute(
-                    @"EXEC dbo.Question_Put
-                    @QuestionId = @QuestionId, @Title = @Title, @Content = @Content",
-                    new { QuestionId = questionId, question.Title, question.Content }
-                );
-                return GetQuestion(questionId);
-            }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return await connection.QueryAsync<QuestionGetManyResponse>(
+                @"EXEC dbo.Question_GetMany_BySearch @Search = @Search", new { Search = search }
+            );
         }
 
-        public void DeleteQuestion(int questionId)
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestionsAsync()
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open(); connection.Execute(
-                    @"EXEC dbo.Question_Delete @QuestionId = @QuestionId",
-                    new { QuestionId = questionId }
-                );
-            }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return await connection.QueryAsync<QuestionGetManyResponse>(
+                "EXEC dbo.Question_GetUnanswered"
+            );
         }
 
-
-        public AnswerGetResponse PostAnswer(AnswerPostRequest answer)
+        public async Task<bool> QuestionExistsAsync(int questionId)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                return connection.QueryFirst<AnswerGetResponse>(
-                    @"EXEC dbo.Answer_Post
-                    @QuestionId = @QuestionId, @Content = @Content, @UserId = @UserId, @UserName = @UserName, @Created = @Created",
-                    answer
-                );
-            }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return await connection.QueryFirstAsync<bool>(
+                @"EXEC dbo.Question_Exists @QuestionId = @QuestionId",
+                new { QuestionId = questionId }
+            );
+        }
+
+        public async Task<QuestionGetSingleResponse> PostQuestionAsync(QuestionPostRequest question)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            var questionId = await connection.QueryFirstAsync<int>(
+                @"EXEC dbo.Question_Post
+                @Title = @Title, @Content = @Content, @UserId = @UserId, @UserName = @UserName, @Created = @Created",
+                question
+            );
+            return await GetQuestionAsync(questionId);
+        }
+
+        public async Task<QuestionGetSingleResponse> PutQuestionAsync(int questionId, QuestionPutRequest question)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            await connection.ExecuteAsync(
+                @"EXEC dbo.Question_Put
+                @QuestionId = @QuestionId, @Title = @Title, @Content = @Content",
+                new { QuestionId = questionId, question.Title, question.Content }
+            );
+            return await GetQuestionAsync(questionId);
+        }
+
+        public async Task DeleteQuestionAsync(int questionId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            await connection.ExecuteAsync(
+                @"EXEC dbo.Question_Delete @QuestionId = @QuestionId",
+                new { QuestionId = questionId }
+            );
+        }
+
+        public async Task<AnswerGetResponse> PostAnswerAsync(AnswerPostRequest answer)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+            return await connection.QueryFirstAsync<AnswerGetResponse>(
+                @"EXEC dbo.Answer_Post
+                @QuestionId = @QuestionId, @Content = @Content, @UserId = @UserId, @UserName = @UserName, @Created = @Created",
+                answer
+            );
         }
     }
 }
