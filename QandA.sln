@@ -3,6 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QandA", "QandA\QandA.csproj", "{D67DF843-1094-4511-B26E-B958EE30620F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{4D447966-B883-4C87-8325-F453FAA1792C}"
+	ProjectSection(SolutionItems) = preProject
+		DataRepository.cs = DataRepository.cs
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
