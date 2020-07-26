@@ -13,6 +13,7 @@
   <ItemGroup>
     <Folder Include="Data\Models\" />
     <Folder Include="SQLScripts\" />
+    <Folder Include="Hubs\" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="SQLScripts\01-Tables.sql" />

@@ -4,7 +4,19 @@ import { gray3, gray6 } from './Styles';
 import React, { FC, useState, Fragment, useEffect } from 'react';
 import { Page } from './Page';
 import { RouteComponentProps } from 'react-router-dom';
-import { QuestionData, getQuestion, postAnswer } from './QuestionsData';
+import {
+  HubConnectionBuilder,
+  HubConnectionState,
+  HubConnection,
+  HttpTransportType,
+} from '@aspnet/signalr';
+import {
+  QuestionData,
+  getQuestion,
+  postAnswer,
+  mapQuestionFromServer,
+  QuestionDataFromServer,
+} from './QuestionsData';
 import { AnswerList } from './AnswerList';
 import { Form, minLength, required, Values } from './components/Form';
 import { Field } from './components/Field';
@@ -23,7 +35,60 @@ export const QuestionPage: FC<RouteComponentProps<RouteParams>> = ({
   match,
 }) => {
   const [question, setQuestion] = useState<QuestionData | null>(null);
+  const setUpSignalRConnection = async (questionId: number) => {
+    const connection = new HubConnectionBuilder()
+      .withUrl('https://localhost:5001/questionshub', {
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets,
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('Message', (message: string) => {
+      console.log('Message', message);
+    });
+
+    connection.on('ReceiveQuestion', (question: QuestionDataFromServer) => {
+      console.log('ReceiveQuestion', question);
+      setQuestion(mapQuestionFromServer(question));
+    });
+
+    try {
+      await connection.start();
+    } catch (err) {
+      console.log(err);
+    }
+
+    if (connection.state === HubConnectionState.Connected) {
+      connection.invoke('SubscribeQuestion', questionId).catch((err: Error) => {
+        return console.error(err.toString());
+      });
+    }
+    return connection;
+  };
+
+  const cleanUpSignalRConnection = async (
+    questionId: number,
+    connection: HubConnection,
+  ) => {
+    if (connection.state === HubConnectionState.Connected) {
+      try {
+        await connection.invoke('UnsubscribeQuestion', questionId);
+      } catch (err) {
+        return console.error(err.toString());
+      }
+      connection.off('Message');
+      connection.off('ReceiveQuestion');
+      connection.stop();
+    } else {
+      connection.off('Message');
+      connection.off('ReceiveQuestion');
+      connection.stop();
+    }
+  };
+
   useEffect(() => {
+    let connection: HubConnection;
     const doGetQuestion = async (questionId: number) => {
       const foundQuestion = await getQuestion(questionId);
       setQuestion(foundQuestion);
@@ -31,7 +96,16 @@ export const QuestionPage: FC<RouteComponentProps<RouteParams>> = ({
     if (match.params.questionId) {
       const questionId = Number(match.params.questionId);
       doGetQuestion(questionId);
+      setUpSignalRConnection(questionId).then((con) => {
+        connection = con;
+      });
     }
+    return function cleanUp() {
+      if (match.params.questionId) {
+        const questionId = Number(match.params.questionId);
+        cleanUpSignalRConnection(questionId, connection);
+      }
+    };
   }, [match.params.questionId]);
 
   const handleSubmit = async (values: Values) => {

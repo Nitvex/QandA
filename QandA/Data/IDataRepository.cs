@@ -18,5 +18,7 @@ namespace QandA.Data
         Task<QuestionGetSingleResponse> PutQuestionAsync(int questionId, QuestionPutRequest question);
         Task DeleteQuestionAsync(int questionId);
         Task<AnswerGetResponse> PostAnswerAsync(AnswerPostFullRequest answer);
+        Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsWithAnswersAsync();
+        Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsBySearchWithPagingAsync(string search, int pageNumber, int pageSize);
     }
 }
