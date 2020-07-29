@@ -9,11 +9,13 @@
     <PackageReference Include="Dapper" Version="2.0.35" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
     <PackageReference Include="dbup" Version="4.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.6" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\Models\" />
     <Folder Include="SQLScripts\" />
     <Folder Include="Hubs\" />
+    <Folder Include="Authorization\" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="SQLScripts\01-Tables.sql" />

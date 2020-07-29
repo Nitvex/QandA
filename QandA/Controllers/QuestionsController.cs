@@ -1,15 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using QandA.Data;
 using QandA.Data.Models;
 using Microsoft.AspNetCore.SignalR;
 using QandA.Hubs;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Text.Json;
+using System.Linq;
 
 namespace QandA.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class QuestionsController : ControllerBase
@@ -17,14 +23,25 @@ namespace QandA.Controllers
         private readonly IDataRepository _dataRepository;
         private readonly IQuestionCache _cache;
         private readonly IHubContext<QuestionsHub> _questionHubContext;
+        private readonly IHttpClientFactory _clientFactory;
+        private readonly string _auth0UserInfo;
 
-        public QuestionsController(IDataRepository dataRepository, IHubContext<QuestionsHub> questionHubContext, IQuestionCache questionCache)
+        public QuestionsController(
+            IDataRepository dataRepository,
+            IHubContext<QuestionsHub> questionHubContext,
+            IQuestionCache questionCache,
+            IHttpClientFactory clientFactory,
+            IConfiguration configuration
+        )
         {
             _dataRepository = dataRepository;
             _questionHubContext = questionHubContext;
             _cache = questionCache;
+            _clientFactory = clientFactory;
+            _auth0UserInfo = $"{configuration["Auth0:Authority"]}userinfo";
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsAsync(
             string search,
@@ -55,12 +72,14 @@ namespace QandA.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpGet("unanswered")]
         public async Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestionsAsync()
         {
             return await _dataRepository.GetUnansweredQuestionsAsync();
         }
 
+        [AllowAnonymous]
         [HttpGet("{questionId}")]
         public async Task<ActionResult<QuestionGetSingleResponse>> GetQuestionAsync(int questionId)
         {
@@ -85,8 +104,8 @@ namespace QandA.Controllers
             {
                 Title = questionPostRequest.Title,
                 Content = questionPostRequest.Content,
-                UserId = "1",
-                UserName = "bob.test@test.com",
+                UserId = User.FindFirst(ClaimTypes.NameIdentifier).Value,
+                UserName = await GetUserName(),
                 Created = DateTime.UtcNow
             }
             );
@@ -96,6 +115,7 @@ namespace QandA.Controllers
             );
         }
 
+        [Authorize(Policy = "MustBeQuestionAuthor")]
         [HttpPut("{questionId}")]
         public async Task<ActionResult<QuestionGetSingleResponse>> PutQuestionAsync(int questionId, QuestionPutRequest questionPutRequest)
         {
@@ -117,6 +137,7 @@ namespace QandA.Controllers
             return savedQuestion;
         }
 
+        [Authorize(Policy = "MustBeQuestionAuthor")]
         [HttpDelete("{questionId}")]
         public async Task<ActionResult> DeleteQuestionAsync(int questionId)
         {
@@ -132,7 +153,7 @@ namespace QandA.Controllers
 
         [ActionName(nameof(PostQuestionAsync))]
         [HttpPost("answer")]
-        public async Task<ActionResult<AnswerGetResponse>> PostAnswer(AnswerPostRequest answerPostRequest)
+        public async Task<ActionResult<AnswerGetResponse>> PostAnswerAsync(AnswerPostRequest answerPostRequest)
         {
             var questionExists = await _dataRepository.QuestionExistsAsync(answerPostRequest.QuestionId.Value);
             if (!questionExists)
@@ -156,6 +177,27 @@ namespace QandA.Controllers
                                                 _dataRepository.GetQuestionAsync(answerPostRequest.QuestionId.Value)
                                              );
             return savedAnswer;
+        }
+
+        private async Task<string> GetUserName()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, _auth0UserInfo);
+            request.Headers.Add("Authorization", Request.Headers["Authorization"].First());
+            var client = _clientFactory.CreateClient();
+            var response = await client.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                var user = JsonSerializer.Deserialize<User>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return user.Name;
+            }
+            else
+            {
+                return "";
+            }
         }
     }
 }
